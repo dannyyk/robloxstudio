@@ -1,8 +1,21 @@
 --[[
     API:
     >> function: {
-        self:init() 
+        self:init(TABLE, SELECTOR) 
             -- FILLS THE CLIENT TABLE MODULE /  SERVER TABLE MODULE
+                * TABLE: [any]
+                    -- Path or a Folder or a Class to path to.
+                * SELECTOR: [INDEXER]
+                 -- must select through
+                    -- Util
+                    -- Script
+                    -- Unknown
+        self:load(TABLE, PATTERN)
+            -- REQUIRES ALL THE MODULESCRIPTS
+                * TABLE: [any] :: TABLE
+                    -- Path or a Folder or a table to path to.
+                * PATTERN: [any] :: TABLE
+                    -- A table to match the pattern string names of the ModuleScript that was filled.
     }
 ]]
 local KiroNet = {
