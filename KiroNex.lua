@@ -1,5 +1,3 @@
-local ServerScriptService = game:GetService("ServerScriptService")
-
 --[[
     API:
     >> function: {
