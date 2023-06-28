@@ -1,4 +1,5 @@
---[[to delay or add any wait() you would have to use tick() or os.time()
+--[[
+to delay or add any wait() you would have to use tick() or os.time()
 
 @start() a new loop
 
@@ -26,15 +27,21 @@ example usage:
 
 local RunService = game:GetService("RunService")
 local KiroLoop = {}
+KiroLoop.__index = KiroLoop
+
+function KiroLoop.new()
+    local self = {}
+    self._func = {}
+    self.Connection = nil
+    
+    setmetatable(self, KiroLoop)
+
+    return self
+end
 
 function KiroLoop:Fill(give_name: string | number?, fn)
     assert(give_name ~= nil, "give_name can't be nil!")
     assert(type(fn) == "function", "Fn isn't a function!")
-
-    if self._func == nil then
-        self._func = {}
-        self._func[give_name] = fn
-    end
 
     self._func[give_name] = fn
 end
@@ -45,13 +52,10 @@ end
 
 function KiroLoop:Terminate()
     self.Connection:Disconnect()
+    self.Connection = nil
 end
 
 function KiroLoop:Start()
-    if self._func == nil then
-        self._func = {}
-    end
-
     self.Connection = RunService.Heartbeat:Connect(function()
         for _, fn in self._func do
             if typeof(fn) == "function" then
