@@ -40,6 +40,7 @@ function KiroLoop.new()
     self._isRunning = false
     self._dupes = 0
 
+    print(getmetatable(self))
     return self
 end
 
