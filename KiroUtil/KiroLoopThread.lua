@@ -46,6 +46,12 @@ function KiroLoop:Fill(give_name: string | number?, fn)
     self._func[give_name] = fn
 end
 
+function KiroLoop:Remove(give_name: string | number)
+    if self._func[give_name] then
+        self._func[give_name] = nil
+    end
+end
+
 function KiroLoop:Get()
     return self._func
 end
