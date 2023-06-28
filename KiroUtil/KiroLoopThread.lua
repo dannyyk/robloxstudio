@@ -37,6 +37,7 @@ function KiroLoop.new()
     self._func = {}
     self._connection = nil
     self._cycle = nil
+    self._firstreg = os.clock()
     
     setmetatable(self, KiroLoop)
 
@@ -50,7 +51,7 @@ function KiroLoop:Fill(give_name: string | number?, fn)
     self._func[give_name] = fn
 end
 
-function KiroLoop:Remove(give_name: string | number)
+function KiroLoop:Remove(give_name: string | number?)
     if self._func[give_name] then
         self._func[give_name] = nil
     end
@@ -65,15 +66,19 @@ function KiroLoop:Terminate()
     self._connection = nil
 end
 
+function KiroLoop:Iterate()
+    for _, _func in self._func do
+        if typeof(_func) == "function" then
+            self._cycle = coroutine.create(_func);
+            coroutine.resume(self._cycle); coroutine.close(self._cycle);
+            self._cycle = nil;
+        end
+    end
+end
+
 function KiroLoop:Start()
     self._connection = RunService.Heartbeat:Connect(function()
-        for _, fn in self._func do
-            if typeof(fn) == "function" then
-                self._cycle = coroutine.create(fn);
-                coroutine.resume(self._cycle); coroutine.close(self._cycle);
-                self._cycle = nil;
-            end
-        end
+        self:Iterate()
     end)
 end
 
