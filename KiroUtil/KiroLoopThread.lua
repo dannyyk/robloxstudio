@@ -16,7 +16,7 @@ to delay or add any wait() you would have to use tick() or os.time()
 
 example usage:
     Server or Client:
-        local KiroLoop = require(KiroLoop)
+        local KiroLoop = require(KiroLoop).new()
         KiroLoop:Start()
 
         KiroLoop:Fill("any_name", function()
@@ -33,32 +33,70 @@ local KiroLoop = {}
 KiroLoop.__index = KiroLoop
 
 function KiroLoop.new()
-    local self = {}
+    local self = setmetatable({}, KiroLoop)
+
     self._func = {}
-    self._connection = nil
     self._cycle = nil
     self._isRunning = false
-    
-    setmetatable(self, KiroLoop)
+    self._dupes = 0
 
     return self
 end
 
-function KiroLoop:Fill(give_name: string | number?, fn)
-    assert(give_name ~= nil, "give_name can't be nil!")
+function KiroLoop:Start()
+    if not self._isRunning  then
+        self._connection = RunService.Heartbeat:Connect(function()
+            self:Iterate()
+        end)
+    else
+        warn(`{script.Name} :Start() cannot be called twice without destroying the old loop first.`)
+    end
+    self._isRunning = true
+end
+
+function KiroLoop:Fill(fn_name: string | number?, fn:() -> ())
+    assert(fn_name ~= nil, "fn_name can't be nil!")
     assert(type(fn) == "function", "Fn isn't a function!")
 
-    self._func[give_name] = fn
-end
-
-function KiroLoop:Remove(give_name: string | number?)
-    if self._func[give_name] then
-        self._func[give_name] = nil
+    if self._func[fn_name] then
+        self._dupes += 1
+        self._func[`{fn_name}{self._dupes}`] = fn
+    else
+        self._func[fn_name] = fn
     end
+
+    return self
 end
 
-function KiroLoop:Get()
-    return self._func
+
+function KiroLoop:terminateWait(num: number)
+    task.delay(num, function()
+        self:Terminate()
+    end)
+end
+
+function KiroLoop:removeFunction(fn_name: string | number?)
+    if self._func[fn_name] then
+        self._func[fn_name] = nil
+        self._dupes -= 1
+    end
+
+    return self
+end
+
+function KiroLoop:removeFunctionWait(fn_name: string | number?, num: number)
+    task.delay(num, function()
+        if self._func[fn_name] then
+            self._func[fn_name] = nil
+            self._dupes -= 1
+        end
+    end)
+    
+    return self
+end
+
+function KiroLoop:IsActive()
+    return self._isRunning
 end
 
 function KiroLoop:Terminate()
@@ -66,10 +104,13 @@ function KiroLoop:Terminate()
     self._connection = nil
     self._isRunning = false
     
-    coroutine.close(self._cycle)
-
-    self._cycle = nil
+    if self._cycle then
+        coroutine.close(self._cycle)
+        self._cycle = nil
+    end
+    
     table.clear(self._func)
+    self = nil
 end
 
 function KiroLoop:Iterate()
@@ -80,14 +121,6 @@ function KiroLoop:Iterate()
             self._cycle = nil;
         end
     end
-end
-
-function KiroLoop:Start()
-    if self._isRunning then return end
-    self._isRunning = true
-    self._connection = RunService.Heartbeat:Connect(function()
-        self:Iterate()
-    end)
 end
 
 return KiroLoop
