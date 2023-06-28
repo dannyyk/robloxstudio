@@ -9,7 +9,10 @@ to delay or add any wait() you would have to use tick() or os.time()
 
 @get() returns the table of function table to index and remove them later on.
 
-@terminate() Ends the loop.
+@remove() 
+@snparam (give-name) indexes through self._func to search the given name when loop is attached.
+
+@terminate() ends the loop.
 
 example usage:
     Server or Client:
@@ -32,7 +35,8 @@ KiroLoop.__index = KiroLoop
 function KiroLoop.new()
     local self = {}
     self._func = {}
-    self.Connection = nil
+    self._connection = nil
+    self._cycle = nil
     
     setmetatable(self, KiroLoop)
 
@@ -57,15 +61,17 @@ function KiroLoop:Get()
 end
 
 function KiroLoop:Terminate()
-    self.Connection:Disconnect()
-    self.Connection = nil
+    self._connection:Disconnect()
+    self._connection = nil
 end
 
 function KiroLoop:Start()
-    self.Connection = RunService.Heartbeat:Connect(function()
+    self._connection = RunService.Heartbeat:Connect(function()
         for _, fn in self._func do
             if typeof(fn) == "function" then
-                fn()
+                self._cycle = coroutine.create(fn);
+                coroutine.resume(self._cycle); coroutine.close(self._cycle);
+                self._cycle = nil;
             end
         end
     end)
