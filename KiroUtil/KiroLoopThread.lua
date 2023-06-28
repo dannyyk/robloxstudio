@@ -37,7 +37,7 @@ function KiroLoop.new()
     self._func = {}
     self._connection = nil
     self._cycle = nil
-    self._firstreg = os.clock()
+    self._isRunning = false
     
     setmetatable(self, KiroLoop)
 
@@ -64,6 +64,12 @@ end
 function KiroLoop:Terminate()
     self._connection:Disconnect()
     self._connection = nil
+    self._isRunning = false
+    
+    coroutine.close(self._cycle)
+
+    self._cycle = nil
+    table.clear(self._func)
 end
 
 function KiroLoop:Iterate()
@@ -77,6 +83,8 @@ function KiroLoop:Iterate()
 end
 
 function KiroLoop:Start()
+    if self._isRunning then return end
+    self._isRunning = true
     self._connection = RunService.Heartbeat:Connect(function()
         self:Iterate()
     end)
