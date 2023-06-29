@@ -44,7 +44,7 @@ end
 function KiroThread:startLoop()
     if not self._isRunning  then
         self._connection = RunService.Heartbeat:Connect(function()
-            self:iterate()
+            self:_iterate()
         end)
     else
         warn(`{script.Name} :Start() cannot be called twice without destroying the old loop first.`)
@@ -83,6 +83,14 @@ function KiroThread:_add(fn_name, fn)
         self._func[`{fn_name}{self._dupes}`] = fn
     else
         self._func[fn_name] = fn
+    end
+end
+
+function KiroThread:_iterate()
+    for _, _func:() -> () in self._func do
+        if typeof(_func) == "function" then
+            self:once(_func)
+        end
     end
 end
 
@@ -149,14 +157,6 @@ end
 
 function KiroThread:closeThread(fn_or_thread: any)
     return coroutine.close(fn_or_thread)
-end
-
-function KiroThread:iterate()
-    for _, _func:() -> () in self._func do
-        if typeof(_func) == "function" then
-            self:once(_func)
-        end
-    end
 end
 
 return KiroThread
