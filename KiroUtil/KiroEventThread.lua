@@ -1,162 +1,132 @@
---[[
-to delay or add any wait() you would have to use tick() or os.time()
+--!nonstrict
+local Connection = newproxy(true)
+local connectionTable = getmetatable(Connection)
 
-@startLoop() a new loop
+local globalFunction = newproxy(true)
+local globalTableF = getmetatable(globalFunction)
 
-@fill() insert a new function inside
-@sparam requires a given name index space to clear the function later.
-@fparam requires a function to fill the loop to run through
+local Kiraps = {} :: {}
+Kiraps.__index = Kiraps
 
-@removeFunction() 
-@snparam (give-name) indexes through self._func to search the given name when loop is attached.
+function Kiraps.new(name_space: string | number, con: RBXScriptSignal) : ()
+    assert(typeof(con) == "RBXScriptSignal", `{con} isn't a signal!`)
 
-@terminate() ends the loop.
-@num has 1 paramater that takes a number to declare when will the loop will be gone.
-example usage:
-    Server or Client:
-        local KiroThread = require(KiroThread).new()
-        KiroThread:startLoop()
+    if connectionTable[con] == nil then
+        if connectionTable[name_space] then
+            return error("Cannot have the same name")
+        end
 
-        KiroThread:fill("any_name", function()
-            print("loop 1")
-        end)
+        connectionTable[name_space] = con
+    end
 
-        KiroThread:fill("any_name1", function()
-            print("loop 2")
-        end)
-]]
+    return setmetatable(
+        {
+        _0functiontbl = {} :: {},
+        _0namespace = name_space :: string or nil,
+        _0connection = connectionTable[name_space] :: RBXScriptSignal,
+        _0old = nil :: RBXScriptSignal | nil
+        },Kiraps
+    )
+end
 
-local RunService = game:GetService("RunService")
-local KiroThread = {}
-KiroThread.__index = KiroThread
+function Kiraps:addGlobal(name_space: string | number, name_thread: string, fn: () -> ())
+    assert(name_thread ~= nil, "name_thread cannot be nil!")
 
-function KiroThread.new()
-    local self = setmetatable({}, KiroThread)
+    if connectionTable[name_space] == nil then
+        return
+    end
 
-    self._func = {}
-    self._threadfunc = {}
-    self._isRunning = false
-    self._dupes = 0
+    if globalTableF[name_space] == nil then
+        globalTableF[name_space] = {}
+        globalTableF[name_space]._0globaltbl = {}
+        globalTableF[name_space]._0globaltbl[name_thread] = fn
+        return
+    end
+
+    if globalTableF[name_space][name_thread] == nil then
+        globalTableF[name_space]._0globaltbl[name_thread] = fn
+        return
+    end
 
     return self
 end
 
-function KiroThread:startLoop()
-    if not self._isRunning  then
-        self._connection = RunService.Heartbeat:Connect(function()
-            self:_iterate()
-        end)
-    else
-        warn(`{script.Name} :Start() cannot be called twice without destroying the old loop first.`)
-    end
-    self._isRunning = true;
-
-    return
-end
-
--- // _private
-
-function KiroThread:_disconnect(fn_name)
-    assert(typeof(fn_name) == "string" or "number", "num must be a number!")
-
-    if self._func[fn_name] then
-        self._func[fn_name] = nil;
-        self._dupes -= 1;
-    end
-end
-
-function KiroThread:_destroy()
-    if self._connection then
-        self._connection:Disconnect()
-        self._connection = nil
+function Kiraps:deleteGlobal(name_space: string | number, name_thread : string)
+    if globalTableF[name_space] ~= nil then
+        if globalTableF[name_space]._0globaltbl[name_thread] then
+            globalTableF[name_space]._0globaltbl[name_thread] = nil
+            print(globalTableF)
+        end
     end
 
-    self._isRunning = false;
-    
-    table.clear(self._func);
-    self = nil;
+    return self
 end
 
-function KiroThread:_add(fn_name, fn)
-    self._dupes += 1;
-    if self._func[fn_name] then
-        self._func[`{fn_name}{self._dupes}`] = fn
-    else
-        self._func[fn_name] = fn
+function Kiraps:delete()
+    if self._0functiontbl[self._0namespace] ~= nil then
+        if self._currentfunction ~= nil then
+            self._0functiontbl[self._0namespace][self._currentfunction] = nil
+            print(self._0functiontbl)
+        end
     end
+    return self
 end
 
-function KiroThread:_iterate()
-    for _, _func:() -> () in self._func do
-        if typeof(_func) == "function" then
-            self:once(_func)
+function Kiraps:_tableFunc(table: {})
+    for _, _0functiontbl in table do
+        if _0functiontbl then
+            _0functiontbl()
         end
     end
 end
 
---==============================================================================
+function Kiraps:Event(fn:() -> ()) : ()
+    assert(type(fn) == "function", `{fn} is not a function!`)
 
-function KiroThread:terminate(num: number)
-    if not self._isRunning then
-        warn(`{script.Name} self:terminate() can't be used unless -> KiroThread: startLoop() is called`)
-    end
+    if self._0connection and typeof(self._0connection) == "RBXScriptSignal" then
 
-    if num then
-        assert(type(num) == "number", "num isn't a number!")
-        task.delay(num, function()
-            self:_destroy()
+        if self._0old and self._0old.Connected then
+            return error("Cannot connect more than one Event.")
+        end
+        
+        self._0old = connectionTable[self._0namespace]:Connect(function(...)
+            fn(...)
+            if self._0functiontbl[self._0namespace] == nil then return end
+            self:_tableFunc(self._0functiontbl[self._0namespace])
+            self:_tableFunc(globalTableF[self._0namespace]._0globaltbl)
         end)
-
-        return
-    end
-    
-
-    self:_destroy()
-end
-
-function KiroThread:removeFunction(fn_name: string | number?, num: number)
-    if num then
-        assert(type(num) == "number", "num isn't a number!")
-
-        task.delay(num, function()
-            self:_disconnect(fn_name)
-            print(self)
-        end)
-
-        return
-    end
-
-    self:_disconnect(fn_name)
-    return self
-end
-
-function KiroThread:fill(fn_name: string | number?, fn:() -> ())
-    assert(fn_name ~= nil, "fn_name can't be nil!")
-    assert(type(fn) == "function", "Fn isn't a function!")
-    self:_add(fn_name, fn)
-
-    if not self._isRunning then
-        warn(`{script.Name} self:fill() can't be used unless -> KiroThread: startLoop() is called`)
     end
 
     return self
 end
 
-function KiroThread:addThread(fn:() -> ())
-    local createC = coroutine.create(fn);
-    
-    return createC
+function Kiraps:Fill(fn:() -> ()): ()
+    if self._0functiontbl[self._0namespace] == nil then
+        self._0functiontbl[self._0namespace] = {}
+    end
+
+    self._currentfunction = fn
+    self._0functiontbl[self._0namespace][self._currentfunction] = fn
+    return self
 end
 
-function KiroThread:once(fn:() -> ())
-    local thread = self:addThread(fn); coroutine.resume(thread);
-    self:closeThread(thread); thread = nil;
+function Kiraps:Destroy(): ()
+    self._0old:Disconnect();
+    self._0old = nil;
+    self._0connection = nil;
+
+    if globalTableF[self._0namespace] then
+        for _, threads in globalTableF[self._0namespace]._0globaltbl do
+            coroutine.close(threads)
+        end
+        globalTableF[self._0namespace] = nil;
+    end
+
+    connectionTable[self._0namespace] = nil;
+    self._0functiontbl[self._0namespace] = nil;
+    self._0namespace = nil;
 
     return self
 end
 
-function KiroThread:closeThread(fn_or_thread: any)
-    return coroutine.close(fn_or_thread)
-end
-
-return KiroThread
+return Kiraps
