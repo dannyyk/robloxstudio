@@ -4,7 +4,15 @@
 
     -@kiro-event-wrapper
     -@authored by: Kiro
-    -@class: Kiraps
+    -@class: Events
+
+    The usage of this Module is to lower too much usage of RBXScriptSignal / Event.
+    The way this works is when you construct this module .new()
+    It will create a RBXScriptSignal/Event and calls all the function by using one-event
+    
+    This is an alternate version of using ConnectParallel but you need an Actor to use it.
+
+    With my Module you won't need an Actor to use it.
 
     GLOBALS:
         addGlobal -- adds another function to the given **name_space**
@@ -167,7 +175,6 @@ end
 
 function Kiraps:Disconnect(name_space: string | number)
     if name_space ~= nil then
-        print(connectionTable[name_space])
         connectionTable[name_space]:Disconnect()
         connectionTable[name_space] = nil
         globalTableF[name_space] = nil
@@ -201,6 +208,7 @@ function Kiraps:Destroy(): ()
     table.clear(globalTableF)
     table.clear(connectionTable)
     table.clear(self)
+    
     return self
 end
 
