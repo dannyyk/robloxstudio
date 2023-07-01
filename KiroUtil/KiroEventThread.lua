@@ -31,9 +31,13 @@
             - Goes to _0functiontbl
             - Actives in Event
 
-        Destroy -- Destroy all of the event itself and cleans up the functions.
+        Destroy -- Destroy all of the event itself and cleans up all the functions.
             - Goes to connectionTable
             - Actives in Event
+            - Warning: 
+                - Do not use this when removing stuff or destroying. 
+                The destroy method, literally breaks this script and destroys everything.
+                Which pauses the functionality of the modules.
 
         Disconnect -- Destroys an event auto-matically
             - Goes to connectionTable
@@ -62,8 +66,6 @@ function Kiraps.new(name_space: string | number, con: RBXScriptSignal) : ()
         {
         _0functiontbl = {} :: {},
         _0namespace = name_space :: string or nil,
-        _0connection = connectionTable[name_space] :: RBXScriptSignal,
-        _0isUsing = nil :: RBXScriptSignal | nil
         },Kiraps
     )
 end
@@ -188,15 +190,16 @@ function Kiraps:Destroy(): ()
         return
     end
 
-    connectionTable[self._0namespace]:Disconnect();
-    connectionTable[self._0namespace] = nil;
+    for _, connections in connectionTable do
+        connections:Disconnect()
+        connections = nil
+    end
 
-    globalTableF[self._0namespace] = nil;
-
-    connectionTable[self._0namespace] = nil;
-    self._0functiontbl[self._0namespace] = nil;
+    self._0functiontbl = nil;
     self._0namespace = nil;
-    
+
+    table.clear(globalTableF)
+    table.clear(connectionTable)
     table.clear(self)
     return self
 end
