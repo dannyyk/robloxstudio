@@ -15,41 +15,38 @@
     With my Module you won't need an Actor to use it.
 
     GLOBALS:
-        addGlobal -- adds another function to the given **name_space**
+        FillGlobal -- adds another function to the given **event_name**
             - Goes to globalTable
             - Actives in Event
 
-        deleteGlobal -- removes a function to the given **name_space** and **name_thread**
+        DeleteGlobal -- removes a function to the given **event_name** and **name_thread**
             - Goes to globalTable
             - Actives in Event
+            - Has call-back (global_function, globalTableF)
+                * The call back are for bug research
 
-        Disconnect -- Destroys an event when **name_space** is given
+        Disconnect -- Destroys an event when **event_name** is given
             - Goes to connectionTable
             - Actives in Event
 
     INIT:
-        Event -- starts the event
+        Connect -- starts the event
             - Starts an Event
-
-        delete -- auto-matically deletes a function
-            - Goes to _0functiontbl
-            - Actives in Event
 
         Fill -- auto-matically adds a function inside **Event**
             - Goes to _0functiontbl
-            - Actives in Event
+            - Actives in Event    
 
-        Destroy -- Destroy all of the event itself and cleans up all the functions.
-            - Goes to connectionTable
+        Delete -- auto-matically deletes a function
+            - Goes to _0functiontbl
             - Actives in Event
-            - Warning: 
-                - Do not use this when removing stuff or destroying. 
-                The destroy method, literally breaks this script and destroys everything.
-                Which pauses the functionality of the modules.
+            - Has call-back (init_function, _0functiontbl)
+                * The call back are for bug research
 
         Disconnect -- Destroys an event auto-matically
             - Goes to connectionTable
             - Actives in Event
+            - Has call-back (table of connection)
 ]]
 
 local connectionTable = {} :: {RBXScriptSignal | RBXScriptConnection}
@@ -59,65 +56,93 @@ local globalTableF = {} :: {() -> ()}
 local Kiraps = {} :: {}
 Kiraps.__index = Kiraps
 
-function Kiraps.new(name_space: string | number, con: RBXScriptSignal) : ()
+function Kiraps.new(event_name: string | number, con: RBXScriptSignal) : ()
     assert(typeof(con) == "RBXScriptSignal", `{con} isn't a signal!`)
 
-    if connectionTable[name_space] == nil then
-        if connectionTable[name_space] then
+    if connectionTable[event_name] == nil then
+        if connectionTable[event_name] then
             return error("Cannot have the same name")
         end
 
-        connectionTable[name_space] = con
+        connectionTable[event_name] = con
     end
 
     return setmetatable(
         {
         _0functiontbl = {} :: {},
-        _0namespace = name_space :: string or nil,
+        _0event_name = event_name :: string or nil,
         },Kiraps
     )
 end
 
-function Kiraps:addGlobal(name_space: string | number, name_thread: string, fn: () -> ())
+function Kiraps:FillGlobal(event_name: string | number, name_thread: string, fn: () -> ())
     assert(name_thread ~= nil, "name_thread cannot be nil!")
 
-    if connectionTable[name_space] == nil then
+    if connectionTable[event_name] == nil then
+        return error("No connection was found.")
+    end
+
+    if globalTableF[event_name] == nil then
+        globalTableF[event_name]= {}
+        globalTableF[event_name][name_thread] = fn
+
         return
     end
 
-    if globalTableF[name_space] == nil then
-        globalTableF[name_space] = {}
-        globalTableF[name_space]._0globaltbl = {}
-        globalTableF[name_space]._0globaltbl[name_thread] = fn
+    if globalTableF[event_name][name_thread] == nil and globalTableF[event_name] ~= nil then
+        globalTableF[event_name][name_thread] = fn
 
-        print(globalTableF)
-        return
-    end
-
-    if globalTableF[name_space][name_thread] == nil then
-        globalTableF[name_space]._0globaltbl[name_thread] = fn
-        print(globalTableF)
         return
     end
 
     return self
 end
 
-function Kiraps:deleteGlobal(name_space: string | number, name_thread : string)
-    if globalTableF[name_space] ~= nil then
-        globalTableF[name_space]._0globaltbl[name_thread] = nil
+function Kiraps:Fill(fn:() -> ()): ()
+    if self._0event_name == nil or connectionTable[self._0event_name] == nil then
+        return error("No namespace in the constructor or no connection was found.")
     end
+
+    if self._0functiontbl[self._0event_name] == nil then
+        self._0functiontbl[self._0event_name] = {}
+    end
+
+    self._currentfunction = fn
+    self._0functiontbl[self._0event_name][self._currentfunction] = fn
 
     return self
 end
 
-function Kiraps:delete()
-    if self._0functiontbl[self._0namespace] ~= nil then
-        if self._currentfunction ~= nil then
-            self._0functiontbl[self._0namespace][self._currentfunction] = nil
-            print(self._0functiontbl)
+function Kiraps:DeleteGlobal(event_name: string | number, name_thread : string, fn: (...any)->(...any)) : ()
+    assert(event_name ~= nil, "event_name cannot be nil!")
+
+    if globalTableF[event_name] ~= nil then
+        globalTableF[event_name][name_thread] = nil
+
+        if fn then
+            fn(globalTableF)
         end
     end
+
+    return self
+end
+
+function Kiraps:Delete(fn: (...any)->(...any)) : ()
+    if self._0event_name == nil then
+        return
+    end
+
+    if self._0functiontbl[self._0event_name] ~= nil then
+        if self._currentfunction ~= nil then
+            self._0functiontbl[self._0event_name][self._currentfunction] = nil
+
+            if fn then
+                fn(self._0functiontbl)
+            end
+
+        end
+    end
+
     return self
 end
 
@@ -133,7 +158,7 @@ function Kiraps:_tableFunc(table: {}, ...)
     end
 end
 
-function Kiraps:returnFunction(types: boolean)
+--[[function Kiraps:returnFunction(types: boolean)
     if types ~= nil then
         print(globalTableF)
 
@@ -141,58 +166,60 @@ function Kiraps:returnFunction(types: boolean)
     end
 
     print(self._0functiontbl)
-end
+end]]
 
-function Kiraps:Event(fn:() -> ()) : ()
+function Kiraps:Connect(fn:() -> ()) : ()
     assert(type(fn) == "function", `{fn} is not a function!`)
 
-    if connectionTable[self._0namespace] ~= nil and typeof(connectionTable[self._0namespace]) == "RBXScriptSignal" then
-
-        --[[if connectionTable[self._0namespace] and connectionTable[self._0namespace].Connected then
-            return error("Cannot connect more than one Event.")
-        end]]
-        
-        connectionTable[self._0namespace] = connectionTable[self._0namespace]:Connect(function(...)
-            fn(...)
-
-            self:_tableFunc(self._0functiontbl[self._0namespace], ...)
-            self:_tableFunc(globalTableF[self._0namespace]._0globaltbl, ...)
-        end)
-    end
-
-    return self
-end
-
-function Kiraps:Fill(fn:() -> ()): ()
-    if self._0functiontbl[self._0namespace] == nil then
-        self._0functiontbl[self._0namespace] = {}
-    end
-
-    self._currentfunction = fn
-    self._0functiontbl[self._0namespace][self._currentfunction] = fn
-    return self
-end
-
-function Kiraps:Disconnect(name_space: string | number)
-    if name_space ~= nil then
-        connectionTable[name_space]:Disconnect()
-        connectionTable[name_space] = nil
-        globalTableF[name_space] = nil
-
-        print(connectionTable, globalTableF)
-        
+    if self._0event_name == nil then
         return
     end
 
-    connectionTable[self._0namespace]:Disconnect()
-    connectionTable[self._0namespace] = nil
-    globalTableF[self._0namespace] = nil
-    self._0functiontbl[self._0namespace] = nil
+    if connectionTable[self._0event_name] ~= nil and typeof(connectionTable[self._0event_name]) == "RBXScriptSignal" then
+        connectionTable[self._0event_name] = connectionTable[self._0event_name]:Connect(function(...)
+            fn(...)
+
+            self:_tableFunc(self._0functiontbl[self._0event_name], ...)
+
+            if globalTableF[self._0event_name] then
+                self:_tableFunc(globalTableF[self._0event_name], ...)
+            end
+            
+        end)
+    else
+        error("Cannot use Event once this event is connected.")
+    end
 
     return self
 end
 
-function Kiraps:Destroy(): ()
+function Kiraps:Disconnect(event_name_or_callback: string | number | (...any)->(...any), fn: (...any)->(...any))
+    if event_name_or_callback ~= nil then
+        connectionTable[event_name_or_callback]:Disconnect()
+        connectionTable[event_name_or_callback] = nil
+        globalTableF[event_name_or_callback] = nil
+
+        if fn then
+            fn(connectionTable)
+        end
+    end
+
+    if self._0event_name ~= nil then
+        connectionTable[self._0event_name]:Disconnect()
+        connectionTable[self._0event_name] = nil
+        globalTableF[self._0event_name] = nil
+        self._0functiontbl[self._0event_name] = nil
+
+        if typeof(event_name_or_callback) == "function" then
+            event_name_or_callback(connectionTable)
+        end
+
+    end
+
+    return self
+end
+
+--[[function Kiraps:Destroy(): ()
     if self == nil then
         return
     end
@@ -203,13 +230,13 @@ function Kiraps:Destroy(): ()
     end
 
     self._0functiontbl = nil;
-    self._0namespace = nil;
+    self._0event_name = nil;
 
     table.clear(globalTableF)
     table.clear(connectionTable)
     table.clear(self)
     
     return self
-end
+end]]
 
 return Kiraps
