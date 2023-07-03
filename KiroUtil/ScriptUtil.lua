@@ -1,7 +1,23 @@
+local RunService = game:GetService("RunService")
+
 local ScriptUtils = {}
 
 function ScriptUtils:Lerp(Min, Max, Alpha)
     return Min + ((Max - Min) * Alpha)
+end
+
+--- Executes code at a specific point in Roblox's engine
+-- @module onSteppedFrame
+function ScriptUtils.onSteppedFrame(_function)
+	assert(type(_function) == "function")
+
+	local conn
+	conn = RunService.Stepped:Connect(function()
+		conn:Disconnect()
+		_function()
+	end)
+
+	return conn
 end
 
 function ScriptUtils:ConvertToBoolean(Input, parTrue, parFalse)
@@ -76,6 +92,27 @@ function ScriptUtils:DeepCompare(t1, t2, ignore_mt)
         if v1 == nil or not self:DeepCompare(v1, v2) then return false end
     end
     return true
+end
+
+--[=[
+	Utility functions involving functions
+	@class FunctionUtils
+]=]
+
+--[=[
+	Binds the "self" variable to the function as the first argument
+
+	@param self table
+	@param func function
+	@return function
+]=]
+function ScriptUtils.bind(self, func)
+	assert(type(self) == "table", "'self' must be a table")
+	assert(type(func) == "function", "'func' must be a function")
+
+	return function(...)
+		return func(self, ...)
+	end
 end
 
 function ScriptUtils:DeepCopy(original)
