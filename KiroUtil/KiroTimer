@@ -1,0 +1,26 @@
+--!strict
+
+local KiroTime = {}
+
+function KiroTime.new(num: number): ()
+    return setmetatable({
+        num or error("no duration")
+    }, {
+        __index = KiroTime
+    })
+end
+
+function KiroTime:Start(): ()
+    self._firststart = os.clock()
+	print(self[1])
+end
+
+function KiroTime:IsFinish(): boolean
+    if os.clock() - self._firststart >= self[1] then
+        return false
+    end
+
+    return true
+end
+
+return KiroTime
