@@ -54,7 +54,6 @@ local connectionTable = {} :: {RBXScriptSignal | RBXScriptConnection}
 local globalTableF = {} :: {() -> ()}
 
 local Kiraps = {} :: {}
-Kiraps.__index = Kiraps
 
 function Kiraps.new(event_name: string | number, con: RBXScriptSignal) : ()
     assert(typeof(con) == "RBXScriptSignal", `{con} isn't a signal!`)
@@ -71,7 +70,9 @@ function Kiraps.new(event_name: string | number, con: RBXScriptSignal) : ()
         {
         _0functiontbl = {} :: {},
         _0event_name = event_name :: string or nil,
-        },Kiraps
+        },{
+            __index = Kiraps
+        }
     )
 end
 
