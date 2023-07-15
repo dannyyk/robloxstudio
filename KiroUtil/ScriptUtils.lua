@@ -32,6 +32,39 @@ function ScriptUtils:InverseLerp(value, min, max)
 	return (value / 100) * (max - min) + min
 end
 
+--[=[
+	Utility functions for animations
+	@class AnimationTrackUtils
+]=]
+--[=[
+	Loads an animation from the animation id
+	@param animatorOrHumanoid Humanoid | Animator
+	@param animationId string
+	@return Animation
+]=]
+function ScriptUtils.loadAnimationFromId(animatorOrHumanoid, animationId)
+	local animation = Instance.new("Animation")
+	animation.AnimationId = animationId
+	return animatorOrHumanoid:LoadAnimation(animation)
+end
+
+--[=[
+	Sets the weight target if not set
+	@param track AnimationTrack
+	@param weight number
+	@param fadeTime number
+	@return Animation
+]=]
+function ScriptUtils.setWeightTargetIfNotSet(track, weight, fadeTime)
+	assert(typeof(track) == "Instance", "Bad track")
+	assert(type(weight) == "number", "Bad weight")
+	assert(type(fadeTime) == "number", "Bad fadeTime")
+
+	if track.WeightTarget ~= weight then
+		track:AdjustWeight(weight, fadeTime)
+	end
+end
+
 function ScriptUtils:DoubleInverseLinearInterpolation(value, min, max, mintwo, maxtwo)
 	return (value - min) / (max - min) * (maxtwo - mintwo) + mintwo
 end
